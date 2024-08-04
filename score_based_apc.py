@@ -1,7 +1,6 @@
 import os.path
-
+import argparse
 import numpy as np
-import pandas as pd
 import torch
 import yaml
 import librosa
@@ -12,10 +11,9 @@ from diffusers import DDIMScheduler
 from pitch_controller.models.unet import UNetPitcher
 from pitch_controller.utils import minmax_norm_diff, reverse_minmax_norm_diff
 from pitch_controller.modules.BigVGAN.inference import load_model
-from utils import get_mel, get_world_mel, get_f0, f0_to_coarse, show_plot, get_matched_f0, log_f0
+from utils import get_world_mel, get_f0, log_f0, get_matched_f0
 from pitch_predictor.models.transformer import PitchFormer
 import pretty_midi
-
 
 def prepare_midi_wav(wav_id, midi_id, sr=24000):
     midi = pretty_midi.PrettyMIDI(midi_id)
@@ -36,18 +34,16 @@ def prepare_midi_wav(wav_id, midi_id, sr=24000):
     cur_roll = roll[:, round(100 * start):round(100 * end)]
     return wav_seg, cur_roll
 
-
-def algin_mapping(content, target_len):
+def align_mapping(content, target_len):
     # align content with mel
     src_len = content.shape[-1]
     target = torch.zeros([content.shape[0], target_len], dtype=torch.float).to(content.device)
-    temp = torch.arange(src_len+1) * target_len / src_len
+    temp = torch.arange(src_len + 1) * target_len / src_len
 
     for i in range(target_len):
-        cur_idx = torch.argmin(torch.abs(temp-i))
+        cur_idx = torch.argmin(torch.abs(temp - i))
         target[:, i] = content[:, cur_idx]
     return target
-
 
 def midi_to_hz(midi):
     idx = torch.zeros(midi.shape[-1])
@@ -59,7 +55,6 @@ def midi_to_hz(midi):
             idx[frame] = torch.tensor(hz)
     return idx
 
-
 @torch.no_grad()
 def score_pitcher(source, pitch_ref, model, hifigan, pitcher, steps=50, shift_semi=0, mask_with_source=False):
     wav, midi = prepare_midi_wav(source, pitch_ref, sr=sr)
@@ -67,7 +62,7 @@ def score_pitcher(source, pitch_ref, model, hifigan, pitcher, steps=50, shift_se
     source_mel = get_world_mel(None, sr=sr, wav=wav)
 
     midi = torch.tensor(midi, dtype=torch.float32)
-    midi = algin_mapping(midi, source_mel.shape[-1])
+    midi = align_mapping(midi, source_mel.shape[-1])
     midi = midi_to_hz(midi)
 
     f0_ori = np.nan_to_num(get_f0(source))
@@ -115,8 +110,14 @@ def score_pitcher(source, pitch_ref, model, hifigan, pitcher, steps=50, shift_se
 
     return pred_audio
 
-
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Voice Pitch Correction')
+    parser.add_argument('--i', type=str, required=True, help='Input vocal audio file (WAV)')
+    parser.add_argument('--r', type=str, required=True, help='Reference MIDI file')
+    parser.add_argument('--o', type=str, required=True, help='Output file for the corrected audio (WAV)')
+
+    args = parser.parse_args()
+
     min_mel = np.log(1e-5)
     max_mel = 2.5
     sr = 24000
@@ -140,7 +141,7 @@ if __name__ == '__main__':
         model.cuda()
     model.eval()
 
-    #  load vocoder
+    # load vocoder
     hifi_path = 'ckpts/bigvgan_24khz_100band/g_05000000.pt'
     hifigan, cfg = load_model(hifi_path, device=device)
     hifigan.eval()
@@ -151,9 +152,5 @@ if __name__ == '__main__':
     pitcher.load_state_dict(ckpt)
     pitcher.eval()
 
-    pred_audio = score_pitcher('examples/score_vocal.wav', 'examples/score_midi.midi', model, hifigan, pitcher, steps=50)
-    sf.write('output_score.wav', pred_audio, samplerate=sr)
-
-
-
-
+    pred_audio = score_pitcher(args.i, args.r, model, hifigan, pitcher, steps=50)
+    sf.write(args.o, pred_audio, samplerate=sr)
