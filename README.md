@@ -1,5 +1,7 @@
 <img src="img\cover.png">
 
+# A simple adaptation of Diff Pitcher to run on Google Colab
+
 # Diff-Pitcher (PyTorch)
 
 Official Pytorch Implementation of [Diff-Pitcher: Diffusion-based Singing Voice Pitch Correction](https://engineering.jhu.edu/lcap/data/uploads/pdfs/waspaa2023_hai.pdf)
@@ -18,7 +20,7 @@ Diff-Pitcher
 
 - [Demo Page](#demo)
 - [Todo List](#todo)
-- [Code Examples](#examples)
+- [Instructions](#Instructions)
 - [References](#references)
 - [Acknowledgement](#acknowledgement)
 
@@ -33,14 +35,28 @@ Diff-Pitcher
 - [x] Pipeline tutorial
 - [ ] Merge to [Your-Stable-Audio](https://github.com/haidog-yaqub/Your-Stable-Audio)
 - [ ] Audio Plugin Support
-## Examples
-- Download checkpoints: 🎒[ckpts](https://github.com/haidog-yaqub/DiffPitcher/tree/main/ckpts)
-- Prepare environment: [requirements.txt](requirements.txt)
+## Instructions
+- Run: Clone Repo and install dependencies
+- Run: Download Models
 - Feel free to try:
+
   - template-based automatic pitch correction: [template_based_apc.py](template_based_apc.py)
+    ```bibtex    
+    Use a third reference voice to tune the input voice.
+    --i: input voice path
+    --r: reference voice path
+    --o: output voice path
+    !python template_based_apc.py --i "/content/DiffPitcher/voice.wav" --r "/content/DiffPitcher/guide.wav" --o output_template.wav
+
+
   - score-based automatic pitch correction: [score_based_apc.py](score_based_apc.py)
-
-
+    ```bibtex
+    Use a MIDI file as a reference to tune voices.
+    --i: input voice path
+    --r: reference MIDI path
+    --o: output voice path
+    !python score_based_apc.py --i "/content/DiffPitcher/voice.wav" --r "/content/DiffPitcher/guide.mid" --o output_score.wav
+    
 ## References
 
 If you find the code useful for your research, please consider citing:
