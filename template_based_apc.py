@@ -1,5 +1,5 @@
 import os.path
-
+import argparse
 import numpy as np
 import pandas as pd
 import torch
@@ -55,6 +55,13 @@ def template_pitcher(source, pitch_ref, model, hifigan, steps=50, shift_semi=0):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Voice Pitch Correction')
+    parser.add_argument('--i', type=str, required=True, help='Input off-key audio file')
+    parser.add_argument('--r', type=str, required=True, help='Reference pitch audio file')
+    parser.add_argument('--o', type=str, required=True, help='Output file for the corrected audio')
+
+    args = parser.parse_args()
+
     min_mel = np.log(1e-5)
     max_mel = 2.5
     sr = 24000
@@ -78,12 +85,10 @@ if __name__ == '__main__':
         model.cuda()
     model.eval()
 
-    #  load vocoder
+    # load vocoder
     hifi_path = 'ckpts/bigvgan_24khz_100band/g_05000000.pt'
     hifigan, cfg = load_model(hifi_path, device=device)
     hifigan.eval()
 
-    pred_audio = template_pitcher('examples/off-key.wav', 'examples/reference.wav', model, hifigan, steps=50, shift_semi=0)
-    sf.write('output_template.wav', pred_audio, samplerate=sr)
-
-
+    pred_audio = template_pitcher(args.i, args.r, model, hifigan, steps=50, shift_semi=0)
+    sf.write(args.o, pred_audio, samplerate=sr)
